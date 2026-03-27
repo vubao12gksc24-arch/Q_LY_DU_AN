@@ -11,6 +11,13 @@ Website giúp quản lý tour, hướng dẫn viên, và quản lý booking.
 ```bash
 git clone <URL-repo>
 cd <tên-thư-mục>
+
+
+pull code về : git pull
+
+đẩy code lên : git add .
+               git commit -m " ....... "
+               git push
 ```
 
 ---
