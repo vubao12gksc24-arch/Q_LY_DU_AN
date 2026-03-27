@@ -35,7 +35,7 @@ class UserModel
 
     // LẤY USER THEO ID
     public function getById($id)
-    {
+    { 
         $sql = "SELECT * FROM users WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([$id]);
