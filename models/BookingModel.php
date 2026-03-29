@@ -359,6 +359,198 @@ class BookingModel
     }
 
 
+    // Hàm lấy tổng tiền đã thanh toán
+    public function getTotalPaid($bookingId)
+    {
+        try {
+            $sql = "SELECT SUM(amount) AS total
+                FROM payments
+                WHERE booking_id = ? ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$bookingId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+        } catch (PDOException $e) {
+            die("Lỗi getTotalPaid(): " . $e->getMessage());
+        }
+    }
 
+    // Hàm cập nhật trạng thái booking
+    public function updateStatus($bookingId, $status)
+    {
+        try {
+            $sql = "UPDATE bookings SET status = ?, updated_at = NOW() WHERE id = ?";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([$status, $bookingId]);
+        } catch (PDOException $e) {
+            die("Lỗi updateStatus(): " . $e->getMessage());
+        }
+    }
+
+    // Cập nhật số tiền cọc và còn lại
+    public function updateFinancials($bookingId, $depositAmount, $remainingAmount)
+    {
+        try {
+            $sql = "UPDATE bookings SET deposit_amount = ?, remaining_amount = ?, updated_at = NOW() WHERE id = ?";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([$depositAmount, $remainingAmount, $bookingId]);
+        } catch (PDOException $e) {
+            die("Lỗi updateFinancials(): " . $e->getMessage());
+        }
+    }
+    // Lọc danh sách booking trong form Thêm phân công
+    public function getBookingsWithoutGuide()
+    {
+        $sql = "
+            SELECT 
+                b.*, 
+                t.name AS tour_name
+            FROM bookings b
+            LEFT JOIN tours t ON t.id = b.tour_id
+            LEFT JOIN tour_assignments ta ON ta.booking_id = b.id
+            WHERE ta.booking_id IS NULL
+            ORDER BY b.id DESC
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy booking theo guide_id (dành cho guide)
+    public function getByGuideId($guideId)
+    {
+        $sql = "SELECT b.*, t.name AS tour_name
+                  FROM bookings b
+                  LEFT JOIN tours t ON t.id = b.tour_id
+                  WHERE b.guide_id = :guide_id
+                  ORDER BY b.date ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':guide_id', $guideId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy chi tiết assignment + booking + tour
+    public function getBookingDetails($assignmentId)
+    {
+        $sql = "SELECT ta.*, 
+                       b.*, 
+                       t.name AS tour_name,
+                       (SELECT COUNT(*) FROM booking_customers bc WHERE bc.booking_id = b.id) AS total_customers
+                FROM tour_assignments ta
+                JOIN bookings b ON ta.booking_id = b.id
+                JOIN tours t ON b.tour_id = t.id
+                WHERE ta.id = ?";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([$assignmentId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+
+    public function removeCustomer($bookingId, $customerId)
+    {
+        try {
+            $sql = "DELETE FROM booking_customers WHERE booking_id = ? AND customer_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$bookingId, $customerId]);
+        } catch (PDOException $e) {
+            die("Lỗi removeCustomer: " . $e->getMessage());
+        }
+    }
+
+    public function updateRoomNumber($bookingId, $customerId, $roomNumber, $notes = null)
+    {
+        try {
+            $sql = "UPDATE booking_customers 
+                    SET room_number = :room_number, notes = :notes
+                    WHERE booking_id = :booking_id AND customer_id = :customer_id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':room_number' => $roomNumber,
+                ':notes' => $notes,
+                ':booking_id' => $bookingId,
+                ':customer_id' => $customerId
+            ]);
+        } catch (PDOException $e) {
+            die("Lỗi updateRoomNumber: " . $e->getMessage());
+        }
+    }
+
+    // Thống kê booking và doanh thu tháng này vs tháng trước
+    public function getMonthlyStats()
+    {
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+        $lastMonth = date('m', strtotime('-1 month'));
+        $lastMonthYear = date('Y', strtotime('-1 month'));
+
+        // Booking mới
+        $sqlBooking = "SELECT 
+            SUM(CASE WHEN MONTH(created_at) = ? AND YEAR(created_at) = ? THEN 1 ELSE 0 END) as current_month_count,
+            SUM(CASE WHEN MONTH(created_at) = ? AND YEAR(created_at) = ? THEN 1 ELSE 0 END) as last_month_count
+            FROM bookings";
+        $stmtBooking = $this->conn->prepare($sqlBooking);
+        $stmtBooking->execute([$currentMonth, $currentYear, $lastMonth, $lastMonthYear]);
+        $bookingStats = $stmtBooking->fetch(PDO::FETCH_ASSOC);
+
+        // Doanh thu (tính tất cả các khoản thanh toán đã ghi nhận)
+        $sqlRevenue = "SELECT 
+            SUM(CASE WHEN MONTH(payment_date) = ? AND YEAR(payment_date) = ? THEN amount ELSE 0 END) as current_month_revenue,
+            SUM(CASE WHEN MONTH(payment_date) = ? AND YEAR(payment_date) = ? THEN amount ELSE 0 END) as last_month_revenue
+            FROM payments";
+        $stmtRevenue = $this->conn->prepare($sqlRevenue);
+        $stmtRevenue->execute([$currentMonth, $currentYear, $lastMonth, $lastMonthYear]);
+        $revenueStats = $stmtRevenue->fetch(PDO::FETCH_ASSOC);
+
+        return [
+            'bookings' => $bookingStats,
+            'revenue' => $revenueStats
+        ];
+    }
+
+    // Doanh thu 6 tháng gần nhất (đảm bảo đủ 6 tháng)
+    public function getRecentRevenue()
+    {
+        // 1. Tạo mảng 6 tháng gần nhất với giá trị 0
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = date('Y-m', strtotime("-$i months"));
+            $months[$month] = [
+                'month' => $month,
+                'total' => 0
+            ];
+        }
+
+        // 2. Lấy dữ liệu thực tế từ DB
+        // Tính doanh thu: cộng deposit/full_payment/remaining, trừ refund
+        $sql = "SELECT 
+                    DATE_FORMAT(payment_date, '%Y-%m') as month,
+                    SUM(CASE 
+                        WHEN type = 'refund' THEN -amount 
+                        ELSE amount 
+                    END) as total
+                FROM payments 
+                WHERE payment_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                GROUP BY DATE_FORMAT(payment_date, '%Y-%m')";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 3. Merge dữ liệu DB vào mảng tháng
+        foreach ($results as $row) {
+            if (isset($months[$row['month']])) {
+                $months[$row['month']]['total'] = (float)$row['total'];
+            }
+        }
+
+        // 4. Trả về mảng tuần tự (bỏ keys)
+        return array_values($months);
+    }
+
+    // Thống kê trạng thái booking
     
 }
