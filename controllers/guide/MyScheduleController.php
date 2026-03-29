@@ -55,5 +55,26 @@ class MyScheduleController
     }
 
     // Trang chi tiết
-    
+    public function detail()
+    {
+        $assignmentId = $_GET['id'] ?? 0;
+
+        // Lấy thông tin phân công
+        $assignment = $this->tourAssignmentModel->getAssignmentById($assignmentId);
+
+        if (!$assignment) {
+            echo "<p>Không tìm thấy tour được phân công!</p>";
+            exit();
+        }
+
+        // Lấy booking và danh sách khách hàng
+        $booking = $this->bookingModel->getById($assignment['booking_id']);
+        $customers = $this->bookingModel->getCustomers($assignment['booking_id']);
+
+        // Tính tiến độ tour
+        $assignment['total_days']  = calculateTotalDays($assignment['start_date'], $assignment['end_date']);
+        $assignment['current_day'] = getCurrentDay($assignment['start_date'], $assignment['end_date']);
+
+        require_once './views/guide/tour_assignments/detail.php';
+    }
 }
