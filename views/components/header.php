@@ -1,0 +1,85 @@
+<?php
+$currentUser = $_SESSION['currentUser'] ?? null;
+
+$fullname = $currentUser['fullname'] ?? 'User';
+$role = ($currentUser['roles'] == 'admin')  ? 'Admin' : 'Hướng dẫn viên';
+$avatar = strtoupper(mb_substr($fullname, 0, 1));
+
+$userId = $currentUser['id'] ?? null;
+
+// Lấy số thông báo chưa đọc
+$unreadNotifications = 0;
+if ($userId) {
+  require_once './models/NotificationModel.php';
+  $notificationModel = new NotificationModel();
+  $unreadNotifications = $notificationModel->countUnread($userId);
+}
+
+// Lấy số đơn xin nghỉ chờ duyệt (chỉ cho admin)
+$pendingLeaveCount = 0;
+if ($userId && $role === 'Admin') {
+  require_once './models/UserModel.php';
+  $userModel = new UserModel();
+  $pendingLeaveCount = count($userModel->getPendingLeaveRequests());
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="vi" class="h-full scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tour Manager - Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="<?= BASE_URL ?>assets/common.js"></script>
+
+</head>
+
+<body class="h-full bg-gray-50 flex">
+  <!-- Container để show alert -->
+
+
+  <!-- Main content (giữ nguyên header như trước) -->
+  <div class="flex-1 ml-64 flex flex-col">
+    <header class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-64 right-0 z-40">
+      <div id="alert-message"
+        class="fixed top-5 right-5 bg-red-500 text-white px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-500">
+      </div>
+      <div class="px-6 py-7 flex items-center justify-between">
+        <div class="flex-1 max-w-2xl">
+          <div class="flex-1 max-w-2xl">
+            <div class="relative">
+              <input type="text" placeholder="Tìm kiếm booking, tour, khách hàng..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <i data-lucide="search" class="absolute left-3 top-2.5 w-5 h-5 text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button onclick="window.location.href='<?= BASE_URL ?>?act=my-notifications'" class="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full">
+            <i data-lucide="bell"></i>
+            <?php if ($unreadNotifications > 0): ?>
+              <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                <?= $unreadNotifications > 99 ? '99+' : $unreadNotifications ?>
+              </span>
+            <?php endif; ?>
+          </button>
+          <div class="flex items-center space-x-3">
+            <a class="flex gap-2" href="?act=profile&id=<?= $userId ?>">
+              <div class="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
+                <?= $avatar ?>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900"><?= htmlspecialchars($fullname) ?></p>
+                <p class="text-xs text-gray-500"><?= $role ?></p>
+
+              </div>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </header>
