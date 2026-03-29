@@ -552,5 +552,47 @@ class BookingModel
     }
 
     // Thống kê trạng thái booking
-    
+    public function getBookingStatusStats()
+    {
+        // Khởi tạo mảng 5 trạng thái mặc định = 0
+        // pending, deposited, paid, cancelled, completed
+        $stats = [
+            'pending' => 0,
+            'deposited' => 0,
+            'paid' => 0,
+            'cancelled' => 0,
+            'completed' => 0
+        ];
+
+        // Lấy dữ liệu từ DB
+        $sql = "SELECT status, COUNT(*) as count FROM bookings GROUP BY status";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Trả về dạng [status => count]
+
+        // Merge dữ liệu DB vào mảng mặc định
+        foreach ($results as $status => $count) {
+            if (isset($stats[$status])) {
+                $stats[$status] = (int)$count;
+            }
+        }
+
+        return $stats;
+    }
+
+    // Lấy booking chờ xử lý mới nhất
+    public function getPendingBookings($limit = 5)
+    {
+        $sql = "SELECT b.*, t.name as tour_name, 
+                       (SELECT name FROM customers c JOIN booking_customers bc ON c.id = bc.customer_id WHERE bc.booking_id = b.id AND bc.is_representative = 1 LIMIT 1) as customer_name
+                FROM bookings b
+                JOIN tours t ON b.tour_id = t.id
+                WHERE b.status = 'pending' 
+                ORDER BY b.created_at DESC 
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
