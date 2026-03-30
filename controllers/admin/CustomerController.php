@@ -220,5 +220,83 @@ class CustomerController
     }
 
     // Import khách hàng từ file Excel
-    
+    public function importCustomers()
+    {
+        // Kiểm tra file upload
+        if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
+            $file = $_FILES['file']['tmp_name'];
+
+            // Kiểm tra phần mở rộng file
+            $ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
+            if (!in_array(strtolower($ext), ['xlsx', 'xls'])) {
+                Message::set('error', 'Vui lòng chọn file Excel (.xlsx, .xls).');
+                header("Location:" . BASE_URL . '?act=customers');
+                exit;
+            }
+
+            require_once './lib/SimpleXLSX.php'; // Thư viện đọc Excel
+
+            if ($xlsx = \Shuchkin\SimpleXLSX::parse($file)) {
+                $count = 0;   // Số dòng được thêm
+                $skipped = 0; // Số dòng bị bỏ qua
+                $rows = $xlsx->rows(); // Lấy toàn bộ dòng trong file
+
+                // Lặp qua từng dòng
+                foreach ($rows as $index => $row) {
+                    if ($index == 0) continue; // Bỏ dòng tiêu đề
+
+                    // Lấy dữ liệu từng ô trong Excel
+                    $name = trim($row[1] ?? '');
+                    $phone = trim($row[2] ?? '');
+                    $email = trim($row[3] ?? '');
+                    $genderText = trim($row[4] ?? 'Khác');
+                    $address = trim($row[5] ?? '');
+                    $citizenId = trim($row[6] ?? '');
+                    $passport = trim($row[7] ?? '');
+
+                    // Kiểm tra dữ liệu bắt buộc
+                    if (empty($name) || empty($email) || empty($phone) || empty($address)) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Chuyển text giới tính sang dạng lưu DB
+                    $gender = 'other';
+                    if (mb_strtolower($genderText) == 'nam' || mb_strtolower($genderText) == 'male') {
+                        $gender = 'male';
+                    } elseif (mb_strtolower($genderText) == 'nữ' || mb_strtolower($genderText) == 'female') {
+                        $gender = 'female';
+                    }
+
+                    // Kiểm tra trùng email hoặc số điện thoại
+                    $existingCustomer = $this->model->findByEmailOrPhone($email, $phone);
+
+                    if ($existingCustomer) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Thêm khách hàng mới
+                    $created_by = $_SESSION['currentUser']['id'];
+                    $this->model->create($name, $email, $phone, $address, $created_by, $passport, $gender, $citizenId);
+                    $count++;
+                }
+
+                // Thông báo sau khi import
+                if ($count > 0) {
+                    Message::set('success', "Đã thêm $count khách hàng từ file Excel." . ($skipped > 0 ? " Bỏ qua $skipped dòng (trùng lặp hoặc thiếu thông tin)." : ""));
+                } else {
+                    Message::set('error', 'Không có khách hàng nào được thêm. ' . ($skipped > 0 ? "Đã bỏ qua $skipped dòng (trùng lặp hoặc thiếu thông tin)." : ""));
+                }
+            } else {
+                Message::set('error', 'Không thể đọc file Excel: ' . \Shuchkin\SimpleXLSX::parseError());
+            }
+        } else {
+            Message::set('error', 'Vui lòng chọn file Excel.');
+        }
+
+        // Quay về danh sách
+        redirect('customers');
+        exit;
+    }
 }
