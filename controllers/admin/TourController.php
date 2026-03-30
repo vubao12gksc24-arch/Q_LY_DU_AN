@@ -274,5 +274,12 @@ foreach ($data['service_ids'] as $service_id) {
     redirect("tours");
   }
 
+  public function delete()
+  {
+    $id = $_GET['id'];
+    $this->tourModel->delete($id);
+    Message::set("success", "Xóa tour thành công!");
+    redirect("tours");
+  }
   
 }
