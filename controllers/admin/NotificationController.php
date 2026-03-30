@@ -93,5 +93,26 @@ class NotificationController
   }
 
   // Chi tiết thông báo
+  public function detail()
+  {
+    requireAdmin();
+    $id = $_GET['id'] ?? null;
+    if (!$id) {
+      redirect('notifications');
+      exit;
+    }
+
+    $notification = $this->notificationModel->getById($id);
+    if (!$notification) {
+Message::set("error", "Thông báo không tồn tại");
+      redirect('notifications');
+      exit;
+    }
+
+    $recipients = $this->notificationModel->getRecipients($id);
+    require_once './views/admin/notifications/detail.php';
+  }
+
+  // Xóa thông báo
   
 }
