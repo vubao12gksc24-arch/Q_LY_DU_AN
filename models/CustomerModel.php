@@ -75,5 +75,12 @@ class CustomerModel
         return $stmt->execute();
     }
     // xoá khách hàng
+    public function delete($id)
+    {
+        $sql = "DELETE FROM customers WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":id", $id);
+        return $stmt->execute();
+    }
     
 }
