@@ -162,6 +162,41 @@ class SupplierController
         // Nếu nhập trực tiếp URL → quay lại danh sách
         redirect('suppliers');
     }
+    public function delete()
+    {
+        $id = $_GET["id"];
 
+        // Model trả về lỗi nếu supplier đang bị ràng buộc FK
+        $result = $this->supplierModel->delete($id);
+        if ($result === "FOREIGN_KEY_CONSTRAINT") {
+            Message::set("error", "Không thể xóa nhà cung cấp này đang sử dụng dịch vụ liên quan!");
+            redirect("suppliers");
+            return;
+        }
+
+        Message::set("success", "Xóa nhà cung cấp thành công!");
+        redirect("suppliers");
+    }
+
+    // Xem chi tiết một nhà cung cấp
+    public function detail()
+    {
+        $id = $_GET['id'] ?? null;
+
+        // Lấy thông tin nhà cung cấp
+        $supplier = $this->supplierModel->getByID($id);
+
+        // Lấy thông tin người tạo
+        $createdBy = $this->userModel->getByID($supplier['created_by']);
+
+        // Lấy thông tin người cập nhật cuối
+        $updatedBy = $this->userModel->getByID($supplier['updated_by']);
+
+        // Lấy các dịch vụ thuộc nhà cung cấp
+        $services = $this->serviceModel->getBySupplierID($id);
+
+        // Load view chi tiết
+        require_once "./views/admin/suppliers/detail.php";
+    }
     
 }
