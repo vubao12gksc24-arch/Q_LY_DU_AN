@@ -149,5 +149,29 @@ $policies = $this->policyModel->getAll();
     require_once './views/admin/tours/detail.php';
   }
 
+  public function edit()
+  {
+    $id = $_GET['id'];
+    $tour = $this->tourModel->getById($id);
+    if (!$tour) {
+      Message::set("error", "Không tìm thấy tour!");
+      redirect("tours");
+    }
+
+    $itineraries = $this->tourModel->getItineraries($id);
+    $tourPolicies = $this->tourModel->getTourPolicies($id);
+    $tourPolicyIds = array_column($tourPolicies, 'id');
+
+    $tourServices = $this->tourModel->getTourServices($id);
+    $tourServiceIds = array_column($tourServices, 'id');
+
+    $policies = $this->policyModel->getAll();
+    $categories = $this->categoryModel->getAll();
+    $destinations = $this->destinationModel->getAll();
+    $services = $this->serviceModel->getAll();
+    $tree = buildTree($categories);
+
+    require_once './views/admin/tours/edit.php';
+  }
+
   
-}
