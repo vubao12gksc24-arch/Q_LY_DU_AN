@@ -106,5 +106,119 @@ class CustomerController
     }
 
     // Cập nhật thông tin khách hàng
+    public function update()
+    {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') { // Kiểm tra submit form
+            // Lấy dữ liệu
+            $id = $_GET['id'];
+            $data = [
+                'name' => trim($_POST['name'] ?? ''),
+                'email' => trim($_POST['email'] ?? ''),
+                'phone' => trim($_POST['phone'] ?? ''),
+                'address' => trim($_POST['address'] ?? ''),
+                'passport' => trim($_POST['passport'] ?? ''),
+                'gender' => trim($_POST['gender'] ?? 'other'),
+                'citizen_id' => trim($_POST['citizen_id'] ?? ''),
+            ];
+            $updated_by = $_SESSION['currentUser']['id'] ?? 1; // ID người cập nhật
+
+            // Rules validate dữ liệu
+            $rules = [
+                'name' => 'required|min:2|max:100',
+                'email' => 'required|email|max:100',
+                'phone' => 'required|phone',
+                'address' => 'required|min:5|max:255',
+                'gender' => 'required',
+            ];
+
+            // Thực hiện validate
+            $errors = validate($data, $rules);
+
+            // Nếu có lỗi → giữ lại dữ liệu + hiện lại form
+            if (!empty($errors)) {
+                $_SESSION['validate_errors'] = $errors;
+                $_SESSION['old'] = $data;
+                $customer = array_merge($this->model->getByID($id), $data); // Merge để giữ giá trị mới nhập
+                require_once "./views/admin/customers/edit.php";
+                return;
+            }
+
+            // Kiểm tra trùng email hoặc số điện thoại (loại trừ khách hàng hiện tại)
+            $existingCustomer = $this->model->findByEmailOrPhone($data['email'], $data['phone']);
+            if ($existingCustomer && $existingCustomer['id'] != $id) {
+                Message::set('error', 'Email hoặc số điện thoại đã tồn tại!');
+                $_SESSION['old'] = $data;
+                $customer = array_merge($this->model->getByID($id), $data);
+                require_once "./views/admin/customers/edit.php";
+                return;
+            }
+
+            // Gọi model update
+            $this->model->update($id, $data['name'], $data['email'], $data['phone'], $data['address'], $updated_by, $data['gender'], $data['passport'], $data['citizen_id']);
+            Message::set("success", "Cập nhật khách hàng thành công!");
+            redirect("customers");
+            die();
+        }
+    }
+
+    // Export danh sách khách hàng ra Excel
+    public function exportCustomers()
+    {
+        // Lấy toàn bộ khách hàng
+        $customers = $this->model->getAll();
+
+        require_once './lib/SimpleXLSXGen.php'; // Thư viện tạo file Excel
+
+        // Tạo dòng tiêu đề
+        $data = [
+            ['STT', 'Họ tên', 'Email', 'Số điện thoại', 'Địa chỉ', 'Giới tính', 'Hộ chiếu', 'CCCD']
+        ];
+
+        $i = 1;
+        foreach ($customers as $c) {
+            // Chuyển giới tính sang tiếng Việt
+            $gender = 'Khác';
+            if ($c['gender'] == 'male') $gender = 'Nam';
+            elseif ($c['gender'] == 'female') $gender = 'Nữ';
+
+            // Thêm từng dòng vào Excel
+            $data[] = [
+                $i++,
+                $c['name'],
+                $c['email'],
+                $c['phone'],
+                $c['address'],
+                $gender,
+                $c['passport'] ?? '',
+                $c['citizen_id'] ?? ''
+            ];
+        }
+
+        // Tạo tên file
+        $filename = 'Danh_sach_khach_hang_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Xuất file Excel
+        \Shuchkin\SimpleXLSXGen::fromArray($data)->downloadAs($filename);
+        exit;
+    }
+
+    public function exportTemplate()
+    {
+        require_once './lib/SimpleXLSXGen.php'; // Thư viện tạo file Excel
+
+        // Tạo dòng tiêu đề
+        $data = [
+            ['STT', 'Họ tên', 'SĐT', 'Email', 'Địa chỉ', 'Giới tính', 'Hộ chiếu(nếu có)', 'CCCD']
+        ];
+
+        // Tạo tên file
+        $filename = 'Template_khach_hang.xlsx';
+
+        // Xuất file Excel
+        \Shuchkin\SimpleXLSXGen::fromArray($data)->downloadAs($filename);
+        exit;
+    }
+
+    // Import khách hàng từ file Excel
     
 }
