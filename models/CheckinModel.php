@@ -158,5 +158,42 @@ class CheckinModel
   }
 
   // Cập nhật số phòng
+  public function updateRoom($customerId, $bookingId, $room)
+  {
+    try {
+      $sql = "UPDATE booking_customers 
+                    SET room_number = :room 
+                    WHERE customer_id = :customer_id AND booking_id = :booking_id";
+      $stmt = $this->conn->prepare($sql);
+      $stmt->execute([
+        ':room' => $room,
+        ':customer_id' => $customerId,
+        ':booking_id' => $bookingId
+      ]);
+      return true;
+    } catch (PDOException $e) {
+      die("Lỗi updateRoom(): " . $e->getMessage());
+    }
+  }
+
+  public function getCheckinLink($linkId, $assignmentId)
+  {
+    try {
+      $sql = "SELECT tcl.*, ta.*, t.name as tour_name, b.start_date, b.end_date, b.booking_code
+            FROM tour_checkin_links tcl
+            JOIN tour_assignments ta ON tcl.tour_assignment_id = ta.id
+            JOIN bookings b ON ta.booking_id = b.id
+            JOIN tours t ON b.tour_id = t.id
+            WHERE tcl.id = ? AND ta.id = ?";
+      $stmt = $this->conn->prepare($sql);
+      $stmt->execute([$linkId, $assignmentId]);
+      $checkinLink = $stmt->fetch(PDO::FETCH_ASSOC);
+      return $checkinLink;
+    } catch (PDOException $e) {
+      die("Lỗi getCheckinLink(): " . $e->getMessage());
+    }
+  }
+
+  // Lấy tất cả check-in links theo booking_id
   
 }
