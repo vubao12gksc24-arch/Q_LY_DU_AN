@@ -27,5 +27,26 @@ class ServiceController
         require_once './views/admin/services/index.php';
     }
 
+    public function detail($id = null)
+    {
+        $id = $id ?? $_GET['id'] ?? 0; // Ưu tiên id truyền vào controller → sau đó lấy từ url
+
+        if (!is_numeric($id) || $id <= 0) { // Chặn id không hợp lệ
+            Message::set("error", "ID không hợp lệ!");
+            redirect("service");
+            exit;
+        }
+
+        $service = $this->serviceModel->getDetail($id); // Lấy thông tin chi tiết dịch vụ
+
+        if (!$service) { // Không tồn tại trong DB
+            Message::set("error", "Dịch vụ không tồn tại!");
+            redirect("service");
+            exit;
+        }
+
+        require_once './views/admin/services/detail.php';
+    }
+
     
 }
