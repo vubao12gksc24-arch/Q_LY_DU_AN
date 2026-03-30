@@ -178,5 +178,21 @@ class ServiceTypeController
         exit();
     }
 
-    
+    // Xem chi tiết
+    public function detail()
+    {
+        $id = $_GET['id'] ?? null;
+        if (!$id) {
+            header("Location:" . BASE_URL . "?act=service-type");
+            exit;
+        }
+
+        $serviceType = $this->serviceTypeModel->getDetail($id);
+        if (!$serviceType) {
+            header("Location:" . BASE_URL . "?act=service-type");
+            exit;
+        }
+
+        require_once './views/admin/service-type/detail.php';
+    }
 }
