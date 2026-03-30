@@ -86,5 +86,41 @@ class PolicyController
     }
 
     // cập nhật chính sách
-    
+    public function update()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect("policies");
+            exit;
+        }
+
+        $id = $_GET['id'];
+
+        $data = [
+            'id' => $id,
+            'title' => trim($_POST['title']),
+            'content' => trim($_POST['content']),
+            'created_by' => $_SESSION['currentUser']['id'],
+        ];
+
+        // validate
+        $rules = [
+            'title' => 'required|min:3|max:50',
+            'content' => 'required|min:10',
+        ];
+
+        $errors = validate($data, $rules);
+
+        if (!empty($errors)) {
+            $policy = $this->model->getByID($id);
+            $policies = $this->model->getAll();
+            require_once './views/admin/policies/edit.php';
+            exit;
+        }
+
+        $this->model->update($data);
+
+        Message::set("success", "Cập nhật thành công!");
+        redirect("policies");
+        exit;
+    }
 }
