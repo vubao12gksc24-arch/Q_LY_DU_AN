@@ -84,5 +84,48 @@ class PaymentController
                 }
             }
         }
+
+        // Nếu có lỗi validation
+        if (!empty($errors)) {
+            $_SESSION['payment_errors'] = $errors;
+            header("Location: " . BASE_URL . "?act=payment-create&booking_id=" . $_POST['booking_id']);
+            exit();
+        }
+
+        // Gom dữ liệu vào mảng
+        $data = [
+            'booking_id'       => $_POST['booking_id'],
+            'payment_method'   => $_POST['payment_method'],
+            'transaction_code' => $_POST['transaction_code'] ?? null,
+            'receipt_file'     => $receiptFile,
+            'amount'           => $_POST['amount'],
+            'type'             => $_POST['type'],
+            'payment_date'     => $_POST['payment_date'] ?? date('Y-m-d'),
+            'created_by'       => $_SESSION['currentUser']['id'] ?? 1
+        ];
+
+        // Validate số tiền thanh toán
+        $booking = $this->bookingModel->getById($data['booking_id']);
+        $totalPaid = $this->bookingModel->getTotalPaid($data['booking_id']);
+        $remaining = $booking['total_amount'] - $totalPaid;
+
+        // Nếu thanh toán vượt quá số tiền còn lại (không áp dụng cho refund)
+        if ($data['type'] != 'refund' && $data['amount'] > $remaining) {
+            Message::set('error', 'Số tiền thanh toán vượt quá số tiền còn lại (' . number_format($remaining) . 'đ)');
+            header("Location: " . BASE_URL . "?act=payment-create&booking_id=" . $data['booking_id']);
+            exit();
+        }
+
+        // Lưu thanh toán mới vào DB
+        $this->paymentModel->store($data);
+
+        // Tự cập nhật trạng thái booking
+        $this->autoUpdateBookingStatus($data['booking_id']);
+
+        // Chuyển về trang chi tiết booking
+        Message::set('success', 'Thêm thanh toán thành công!');
+        header("Location: " . BASE_URL . "?act=booking-detail&id=" . $data['booking_id'] . "&tab=payments");
+        exit();
     }
+
 }
