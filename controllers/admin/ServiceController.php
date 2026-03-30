@@ -48,5 +48,32 @@ class ServiceController
         require_once './views/admin/services/detail.php';
     }
 
+    public function delete($id = null)
+    {
+        $id = $id ?? $_GET['id'] ?? 0;
+
+        if (!is_numeric($id) || $id <= 0) { // Chặn id lỗi
+            Message::set("error", "ID không hợp lệ!");
+            redirect("service");
+            exit;
+        }
+
+        if ($this->serviceModel->delete($id)) { // Xóa trong DB
+            Message::set("success", "Xóa dịch vụ thành công!");
+        } else {
+            Message::set("error", "Xóa dịch vụ thất bại!");
+        }
+
+        redirect("service");
+    }
+
+    public function create()
+    {
+        $serviceTypes = $this->serviceTypeModel->getAll();
+        $suppliers = $this->supplierModel->getAll();
+
+        require_once './views/admin/services/create.php';
+    }
+
     
 }
