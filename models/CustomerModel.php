@@ -90,5 +90,32 @@ class CustomerModel
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    public function filter($search = '',)
+    {
+        try {
+            $sql = "SELECT * FROM customers WHERE 1";
+            $params = [];
+
+            // Lọc theo tên và email
+            if (!empty($search)) {
+                $sql .= " AND name LIKE :name OR email LIKE :email OR phone LIKE :phone OR address LIKE :address";
+                $params['name'] = "%" . $search . "%";
+                $params['email'] = "%" . $search . "%";
+                $params['phone'] = "%$search%";
+                $params['address'] = "%$search%";
+            }
+
+            // Sắp xếp mới nhất
+            $sql .= " ORDER BY id DESC";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            die("Error: " . $e->getMessage());
+        }
+    }
+
     
 }
