@@ -246,6 +246,96 @@ class PaymentController
         header("Location: " . BASE_URL . "?act=booking-detail&id=" . $bookingId . "&tab=payments");
         exit();
     }
+// Xem chi tiết thanh toán
+    public function detail()
+    {
+        $id = $_GET['id'];
+        $payment = $this->paymentModel->findById($id);
 
-    
+        require_once './views/admin/payments/detail.php';
+    }
+
+    // Xóa thanh toán
+    public function delete()
+    {
+        $id = $_GET['id'];
+
+        // Lấy booking_id của payment để lát cập nhật
+        $payment = $this->paymentModel->findById($id);
+        $booking_id = $payment['booking_id'];
+
+        // Lấy thông tin booking
+        $booking = $this->bookingModel->getById($booking_id);
+
+        // Ngăn xóa payment của booking đã completed
+        if ($booking['status'] === 'completed') {
+            Message::set('error', 'Không thể xóa thanh toán của booking đã hoàn thành');
+            header("Location: " . BASE_URL . "?act=booking-detail&id=$booking_id&tab=payments");
+            exit();
+        }
+
+        // Xóa payment
+        $this->paymentModel->destroy($id);
+
+        // Cập nhật lại trạng thái booking
+        $this->autoUpdateBookingStatus($booking_id);
+
+        header("Location: " . BASE_URL . "?act=booking-detail&id=$booking_id&tab=payments");
+        exit();
+    }
+
+    // Logic cập nhật trạng thái booking dựa vào payment
+    public function autoUpdateBookingStatus($bookingId)
+    {
+        $totalPaid = $this->bookingModel->getTotalPaid($bookingId);
+        $booking = $this->bookingModel->getById($bookingId);
+
+        if (!$booking) return;
+
+        // Kiểm tra xem có payment hoàn tiền (refund) không
+        $payments = $this->paymentModel->getAllByBooking($bookingId);
+        $hasRefund = false;
+
+        foreach ($payments as $payment) {
+            if ($payment['type'] === 'refund') {
+                $hasRefund = true;
+                break;
+            }
+        }
+
+        // Nếu có refund thì booking bị coi như hủy
+        if ($hasRefund) {
+            $totalAmount = $booking['total_amount'];
+            $remaining = $totalAmount - $totalPaid;
+            $this->bookingModel->updateFinancials($bookingId, $totalPaid, $remaining);
+            $this->bookingModel->updateStatus($bookingId, 'cancelled');
+            return;
+        }
+
+        // Không sửa status nếu đã hoàn thành hoặc đã hủy
+        if (in_array($booking['status'], ['completed', 'cancelled'])) {
+            $totalAmount = $booking['total_amount'];
+            $remaining = $totalAmount - $totalPaid;
+
+            // Nhưng vẫn cập nhật tiền
+            $this->bookingModel->updateFinancials($bookingId, $totalPaid, $remaining);
+            return;
+        }
+
+        // Tính lại số dư
+        $totalAmount = $booking['total_amount'];
+        $remaining = $totalAmount - $totalPaid;
+
+        // Cập nhật số tiền
+        $this->bookingModel->updateFinancials($bookingId, $totalPaid, $remaining);
+
+        // Logic đổi trạng thái dựa vào tổng tiền thanh toán
+        if ($totalPaid >= $totalAmount) {
+            $this->bookingModel->updateStatus($bookingId, 'paid'); // Thanh toán đủ
+        } elseif ($totalPaid > 0) {
+            $this->bookingModel->updateStatus($bookingId, 'deposited'); // Cọc một phần
+        } else {
+            $this->bookingModel->updateStatus($bookingId, 'pending'); // Chưa thanh toán
+        }
+    }
 }
