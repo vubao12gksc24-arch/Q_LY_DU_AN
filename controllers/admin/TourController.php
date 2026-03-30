@@ -43,6 +43,16 @@ class TourController
 
     require_once './views/admin/tours/index.php';
   }
+public function create()
+  {
+    $policies = $this->policyModel->getAll();
+    $categories = $this->categoryModel->getAll();
+    $destinations = $this->destinationModel->getAll();
+    $services = $this->serviceModel->getAll();
+    $tree = buildTree($categories);
+    require_once './views/admin/tours/create.php';
+  }
 
+  
   
 }
