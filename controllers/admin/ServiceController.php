@@ -183,7 +183,7 @@ class ServiceController
         }
 
         if ($this->serviceModel->update($id, $data)) {
-            Message::set("success", "Cập nhật dịch vụ thành công!");
+            Message::set("success", "Cập nhật dịch vụ thành công!");    
         } else {
             Message::set("error", "Cập nhật thất bại!");
         }
