@@ -33,5 +33,14 @@ class CustomerController
         require_once "./views/admin/customers/detail.php";
     }
 
+    public function delete()
+    {
+        $id = $_GET['id']; // Lấy id từ URL
+        $this->model->delete($id); // Xóa khách hàng
+        redirect("customers"); // Quay về danh sách
+        Message::set("success", "Xóa thành công!"); // Gửi thông báo
+        die();
+    }
+
     
 }
