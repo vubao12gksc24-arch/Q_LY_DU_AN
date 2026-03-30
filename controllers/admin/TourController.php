@@ -101,5 +101,53 @@ $policies = $this->policyModel->getAll();
     }
 
     // Tạo tour và lấy ID
-    
+    $tourId = $this->tourModel->create($data);
+
+    // Thêm lịch trình
+    $destinationIds = $_POST['destination_id'];
+    $arrival_times = $_POST['arrival_time'];
+    $departure_times = $_POST['departure_time'];
+    $descriptions = $_POST['description'];
+
+    for ($i = 0; $i < count($destinationIds); $i++) {
+      $this->tourModel->addItinerary([
+        'tour_id' => $tourId,
+        'destination_id' => $destinationIds[$i],
+        'order_number' => $i + 1,
+        'arrival_time' => $arrival_times[$i],
+        'departure_time' => $departure_times[$i],
+        'description' => $descriptions[$i],
+        'created_by' => $_SESSION['currentUser']['id']
+      ]);
+    }
+
+    // Gắn policies
+    $policy_ids = $_POST['policy_ids'];
+    foreach ($policy_ids as $policy_id) {
+      $this->tourModel->attachPolicy($tourId, $policy_id, $_SESSION['currentUser']['id']);
+    }
+
+    // Gắn services nếu là tour cố định
+    if ($data['is_fixed'] && !empty($data['service_ids'])) {
+      foreach ($data['service_ids'] as $service_id) {
+        $this->tourModel->attachService($tourId, $service_id, $_SESSION['currentUser']['id']);
+      }
+    }
+
+    Message::set("success", "Thêm tour thành công!");
+    redirect("tours");
+  }
+
+  public function detail()
+  {
+    $id = $_GET['id'];
+    $tour = $this->tourModel->getById($id);
+    $itineraries = $this->tourModel->getItinerariesByTourId($id);
+    $policies = $this->tourModel->getPoliciesByTourId($id);
+    $services = $this->tourModel->getTourServices($id);
+    // dd($tour, $itineraries, $policies);
+    require_once './views/admin/tours/detail.php';
+  }
+
+  
 }
