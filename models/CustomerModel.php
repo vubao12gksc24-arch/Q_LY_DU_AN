@@ -82,5 +82,13 @@ class CustomerModel
         $stmt->bindParam(":id", $id);
         return $stmt->execute();
     }
+    public function detail($id)
+    {
+        $sql = "SELECT * FROM customers WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":id", $id);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
     
 }
