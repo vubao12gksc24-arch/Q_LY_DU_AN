@@ -26,5 +26,12 @@ class CustomerController
         require_once "./views/admin/customers/index.php";
     }
 
+    public function detail()
+    {
+        $id = $_GET['id']; // Lấy id khách hàng từ URL
+        $customer = $this->model->getByID($id); // Lấy chi tiết khách hàng
+        require_once "./views/admin/customers/detail.php";
+    }
+
     
 }
