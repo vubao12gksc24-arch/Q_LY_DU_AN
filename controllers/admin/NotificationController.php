@@ -20,5 +20,78 @@ class NotificationController
   }
 
   // Form tạo thông báo mới
+  public function create()
+  {
+    requireAdmin();
+    $users = $this->notificationModel->getAllUsers();
+    require_once './views/admin/notifications/create.php';
+  }
+
+  // Xử lý tạo thông báo
+  public function store()
+  {
+    requireAdmin();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+      $data = [
+        'title' => trim($_POST['title']),
+        'message' => trim($_POST['message']),
+        'type' => $_POST['type'] ?? 'general',
+        'created_by' => $_SESSION['currentUser']['id']
+      ];
+
+      $recipientType = $_POST['recipient_type'] ?? 'all';
+      $selectedUsers = $_POST['selected_users'] ?? [];
+
+      // Validate
+      $rules = [
+        'title' => 'required|min:5|max:255',
+        'message' => 'required|min:10'
+      ];
+
+      $errors = validate($data, $rules);
+
+      if (!empty($errors)) {
+        $users = $this->notificationModel->getAllUsers();
+        require_once './views/admin/notifications/create.php';
+        exit;
+      }
+
+      // Tạo thông báo
+      $notificationId = $this->notificationModel->create($data);
+
+      // Xác định người nhận
+      $recipientIds = [];
+
+      if ($recipientType === 'all') {
+        // Gửi cho tất cả nhân viên
+        $allUsers = $this->notificationModel->getAllUsers();
+        $recipientIds = array_column($allUsers, 'id');
+      } elseif ($recipientType === 'role') {
+        // Gửi theo vai trò
+        $role = $_POST['role'] ?? 'guide';
+        $allUsers = $this->notificationModel->getAllUsers();
+        foreach ($allUsers as $user) {
+          if ($user['roles'] === $role) {
+            $recipientIds[] = $user['id'];
+          }
+        }
+      } elseif ($recipientType === 'specific') {
+        // Gửi cho người cụ thể
+        $recipientIds = $selectedUsers;
+      }
+
+      // Thêm người nhận
+      if (!empty($recipientIds)) {
+        $this->notificationModel->addRecipients($notificationId, $recipientIds);
+      }
+
+      Message::set("success", "Tạo thông báo thành công!");
+      $_SESSION['unreadCount'] = $this->notificationModel->countUnread($_SESSION['currentUser']['id']);
+      redirect("notifications");
+      exit;
+    }
+  }
+
+  // Chi tiết thông báo
   
 }
