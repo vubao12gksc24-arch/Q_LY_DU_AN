@@ -114,5 +114,52 @@ Message::set("error", "Thông báo không tồn tại");
   }
 
   // Xóa thông báo
+  public function delete()
+  {
+    requireAdmin();
+    if (!isset($_GET['id'])) {
+      redirect('notifications');
+      exit;
+    }
+
+    $id = $_GET['id'];
+    $notification = $this->notificationModel->getById($id);
+
+    if (!$notification) {
+      Message::set("error", "Thông báo không tồn tại");
+      redirect("notifications");
+      exit;
+    }
+
+    $this->notificationModel->delete($id);
+    Message::set("success", "Xóa thông báo thành công!");
+    redirect("notifications");
+    exit;
+  }
+
+  public function myNotifications()
+  {
+    $userId = $_SESSION['currentUser']['id'];
+    $notifications = $this->notificationModel->getByUserId($userId, 10);
+    $unreadCount = $this->notificationModel->countUnread($userId);
+    $_SESSION['unreadCount'] = $unreadCount;
+    require_once './views/shared/my_notification.php';
+  }
+
+  public function read()
+  {
+    $notificationId = $_GET['id'] ?? null;
+    $userId = $_SESSION['currentUser']['id'];
+
+    if ($notificationId) {
+      $this->notificationModel->markAsRead($notificationId, $userId);
+      Message::set("success", "Đã đánh dấu thông báo là đã đọc!");
+    }
+
+    redirect("my-notifications");
+    exit;
+  }
+
+  // Đánh dấu tất cả đã đọc
   
 }
