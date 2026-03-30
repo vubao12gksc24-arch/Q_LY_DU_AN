@@ -161,5 +161,40 @@ Message::set("error", "Thông báo không tồn tại");
   }
 
   // Đánh dấu tất cả đã đọc
+  public function markAllRead()
+  {
+    $userId = $_SESSION['currentUser']['id'];
+    $this->notificationModel->markAllAsRead($userId);
+
+    Message::set("success", "Đã đánh dấu tất cả thông báo là đã đọc!");
+    redirect("my-notifications");
+    exit;
+  }
+
+  // Form chỉnh sửa thông báo
+  public function edit()
+  {
+    requireAdmin();
+    $id = $_GET['id'] ?? null;
+    if (!$id) {
+      redirect('notifications');
+      exit;
+    }
+
+    $notification = $this->notificationModel->getById($id);
+    if (!$notification) {
+      Message::set("error", "Thông báo không tồn tại");
+      redirect('notifications');
+      exit;
+    }
+
+    $users = $this->notificationModel->getAllUsers();
+    $recipients = $this->notificationModel->getRecipients($id);
+    $recipientIds = array_column($recipients, 'id');
+
+    require_once './views/admin/notifications/edit.php';
+  }
+
+  // Xử lý cập nhật thông báo
   
 }
