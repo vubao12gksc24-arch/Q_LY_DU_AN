@@ -213,5 +213,19 @@ class CheckinModel
   }
 
   // Lấy danh sách khách hàng đã check-in cho một link cụ thể
-  
+  public function getCheckedCustomers($checkinLinkId)
+  {
+    try {
+      $sql = "SELECT c.*, cc.checkin_time
+                FROM customer_checkins cc
+                JOIN customers c ON cc.customer_id = c.id
+                WHERE cc.tour_checkin_link_id = :link_id
+                ORDER BY cc.checkin_time DESC";
+      $stmt = $this->conn->prepare($sql);
+      $stmt->execute([':link_id' => $checkinLinkId]);
+      return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      die("Lỗi getCheckedCustomers(): " . $e->getMessage());
+    }
+  }
 }
