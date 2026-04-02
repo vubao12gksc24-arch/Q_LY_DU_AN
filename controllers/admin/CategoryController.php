@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <?php
 class CategoryController
 {
@@ -115,9 +114,3 @@ class CategoryController
     exit;
   }
 }
-=======
-// test git push
-<?php
-
-?>
->>>>>>> ef2426f26b0031323e921edfaa1b969e5a48190d
