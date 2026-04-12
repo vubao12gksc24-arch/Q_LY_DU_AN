@@ -1,83 +1,125 @@
 <?php require_once './views/components/header.php'; ?>
 <?php require_once './views/components/sidebar.php'; ?>
 
-<main class="pt-28 px-6 pb-20 text-gray-700">
+<main class="pt-28 px-6 pb-20">
 
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-semibold">
-            Chi tiết hợp đồng #<?= $contract['id'] ?>
-        </h1>
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-xl font-semibold">Cập nhật hợp đồng</h1>
 
-        <a href="<?= BASE_URL ?>?act=booking-detail&id=<?= $booking_id ?>&tab=contracts"
+        <a href="<?= BASE_URL ?>?act=booking-detail&id=<?= $contract['booking_id'] ?>&tab=contracts"
             class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm">
             Quay lại
         </a>
     </div>
 
-    <div class="bg-white rounded shadow p-6 grid grid-cols-2 gap-6">
+
+    <form action="<?= BASE_URL . '?act=contract-update' ?>" method="POST"
+        enctype="multipart/form-data" class="space-y-4">
+
+        <input type="hidden" name="id" value="<?= $contract['id'] ?>">
 
         <div>
-            <p class="font-semibold">Tên hợp đồng:</p>
-            <p><?= $contract['contract_name'] ?></p>
+            <label class="block text-sm mb-1">Tên hợp đồng</label>
+            <input type="text" name="contract_name" value="<?= $contract['contract_name'] ?>" required class="border p-2 w-full rounded">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="mb-4">
+                <label for="effective_date" class="block text-sm font-medium text-gray-700">Ngày hiệu lực</label>
+                <input type="date" id="effective_date" name="effective_date"
+                    value="<?= !empty($contract['effective_date']) ? date('Y-m-d', strtotime($contract['effective_date'])) : '' ?>"
+                    class="border p-2 w-full rounded" readonly>
+            </div>
+
+            <div class="mb-4">
+                <label for="expiry_date" class="block text-sm font-medium text-gray-700">Ngày hết hạn</label>
+                <input type="date" id="expiry_date" name="expiry_date"
+                    value="<?= !empty($contract['expiry_date']) ? date('Y-m-d', strtotime($contract['expiry_date'])) : '' ?>"
+                    class="border p-2 w-full rounded" readonly>
+            </div>
         </div>
 
         <div>
-            <p class="font-semibold">Mã Booking:</p>
-            <p class="font-bold text-blue-600"><?= $contract['booking_code'] ?? 'N/A' ?></p>
+            <label class="block text-sm mb-1">Người ký</label>
+            <select name="signer_id" class="border p-2 w-full rounded">
+                <option value="<?= $_SESSION['currentUser']['id'] ?>" selected>
+                    <?= $_SESSION['currentUser']['fullname'] ?>
+                </option>
+            </select>
         </div>
 
         <div>
-            <p class="font-semibold">Người ký (Admin):</p>
-            <p><?= $_SESSION['currentUser']['fullname'] ?></p>
+            <label class="block text-sm mb-1">Khách hàng ký</label>
+            <select name="customer_id" class="border p-2 w-full rounded" required>
+                <option value="">-- Chọn khách hàng --</option>
+                <?php foreach ($bookingCustomers as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= ($contract['customer_id'] == $c['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($c['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
 
         <div>
-            <p class="font-semibold">Khách hàng ký:</p>
-            <p><?= htmlspecialchars($contract['customer_name'] ?? 'Không xác định') ?></p>
-        </div>
-
-        <div>
-            <p class="font-semibold">Ngày hiệu lực:</p>
-            <p><?= !empty($contract['effective_date']) ? date('Y-m-d', strtotime($contract['effective_date'])) : '' ?></p>
-        </div>
-
-        <div>
-            <p class="font-semibold">Ngày hết hạn:</p>
-            <p><?= !empty($contract['expiry_date']) ? date('Y-m-d', strtotime($contract['expiry_date'])) : '' ?></p>
-        </div>
-
-        <div>
-            <p class="font-semibold mb-1">Trạng thái:</p>
-            <?php
-            $statusLabels = [
-                'active' => 'Đang hoạt động',
-                'inactive' => 'Ngừng hoạt động',
-                'expired' => 'Hết hạn'
-            ];
-            $statusText = $statusLabels[$contract['status']] ?? $contract['status'];
-
-            $statusClass = 'bg-gray-100 text-gray-700';
-            if ($contract['status'] === 'active') $statusClass = 'bg-green-100 text-green-700';
-            elseif ($contract['status'] === 'inactive') $statusClass = 'bg-red-100 text-red-700';
-            elseif ($contract['status'] === 'expired') $statusClass = 'bg-yellow-100 text-yellow-700';
-            ?>
-            <span class="px-3 py-1 <?= $statusClass ?> rounded">
-                <?= $statusText ?>
-            </span>
-        </div>
-
-        <div class="col-span-2">
-            <p class="font-semibold">File hợp đồng:</p>
+            <label class="block text-sm mb-1">File hợp đồng hiện tại</label>
             <?php if ($contract['file_url']): ?>
-                <a href="<?= $contract['file_url'] ?>"
-                    class="text-blue-600 underline" target="_blank">
-                    Tải xuống để xem
+                <a href="<?= $contract['file_url'] ?>" target="_blank" class="text-blue-600 underline">
+                    Tải về
                 </a>
             <?php else: ?>
-                <p>Không có file</p>
+                <p class="text-gray-400 text-sm">Chưa có file</p>
             <?php endif; ?>
         </div>
 
-    </div>
+        <div>
+            <label class="block text-sm mb-1">Upload file mới (nếu thay)</label>
+            <input type="file" name="file_upload" accept=".pdf,.doc,.docx" class="border p-2 w-full rounded">
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">Trạng thái</label>
+            <select name="status" class="border p-2 w-full rounded">
+                <option value="active" <?= $contract['status'] == 'active' ? 'selected' : '' ?>>Đang hiệu lực</option>
+                <option value="inactive" <?= $contract['status'] == 'inactive' ? 'selected' : '' ?>>Chấm dứt</option>
+                <option value="expired" <?= $contract['status'] == 'expired' ? 'selected' : '' ?>>Hết hạn</option>
+            </select>
+        </div>
+
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+            Cập nhật
+        </button>
+
+    </form>
 
 </main>
+
+<?php require_once './views/components/footer.php'; ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const expiryInput = document.getElementById('expiry_date');
+        const statusSelect = document.querySelector('select[name="status"]');
+        const activeOption = statusSelect.querySelector('option[value="active"]');
+
+        function checkExpiry() {
+            const expiryDate = new Date(expiryInput.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (expiryInput.value && expiryDate < today) {
+                // Nếu hết hạn -> Disable active, chuyển sang expired nếu đang chọn active
+                activeOption.disabled = true;
+                if (statusSelect.value === 'active') {
+                    statusSelect.value = 'expired';
+                }
+            } else {
+                activeOption.disabled = false;
+            }
+        }
+
+        // Check on load
+        checkExpiry();
+
+        // Check on change
+        expiryInput.addEventListener('change', checkExpiry);
+    });
+</script>
