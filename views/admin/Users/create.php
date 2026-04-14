@@ -144,5 +144,18 @@ require_once './views/components/sidebar.php';
   </form>
 </main>
 
+<script>
+  function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('avatar-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        document.getElementById('avatar-preview').classList.remove('hidden');
+        document.getElementById('avatar-placeholder').classList.add('hidden');
+      }
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+</script>
 
 <?php require_once './views/components/footer.php'; ?>
