@@ -1,408 +1,202 @@
 <?php
 require_once './views/components/header.php';
 require_once './views/components/sidebar.php';
-
-// Ưu tiên lấy data từ POST (khi có lỗi validation), nếu không thì từ database
-$tourData = !empty($_POST) ? $_POST : $tour;
-$dayCount = !empty($_POST['destination_id']) ? count($_POST['destination_id']) : count($itineraries);
 ?>
-<main class="pt-28 px-8 bg-gray-50 min-h-screen overflow-y-auto">
-  <div class="max-w-12xl mx-auto">
-    <!-- Header của form -->
-    <div class="flex items-center justify-between mb-8">
-      <div class="flex items-center gap-4">
-        <button onclick="history.back()" class="p-2 hover:bg-gray-100 rounded-lg transition">
-          <i data-lucide="arrow-left" class="w-6 h-6"></i>
-        </button>
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900">Chỉnh sửa Tour</h2>
-          <p class="text-sm text-gray-600">Cập nhật thông tin chi tiết về tour</p>
+
+<main class="mt-24 p-6 min-h-screen bg-gray-50 font-sans">
+  <!-- Breadcrumb -->
+  <div class="mb-8">
+    <div class="flex items-center gap-3 text-sm mb-4">
+      <a href="?act=user" class="text-gray-600 hover:text-orange-600 flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Quay lại
+      </a>
+      <span class="text-gray-400">/</span>
+      <span class="text-gray-900 font-medium">Chỉnh sửa nhân viên</span>
+    </div>
+    <h1 class="text-3xl font-medium text-gray-900">Chỉnh sửa nhân viên</h1>
+  </div>
+
+
+
+  <?php
+  $isOnLeave = false;
+  if (!empty($user['leave_start']) && !empty($user['leave_end'])) {
+    $today = new DateTime();
+    $today->setTime(0, 0, 0);
+    $start = new DateTime($user['leave_start']);
+    $start->setTime(0, 0, 0);
+    $end = new DateTime($user['leave_end']);
+    $end->setTime(0, 0, 0);
+
+    if ($today >= $start && $today <= $end) {
+      $isOnLeave = true;
+    }
+  }
+  ?>
+
+  <?php if ($isOnLeave): ?>
+    <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i data-lucide="alert-circle" class="h-5 w-5 text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-yellow-700">
+            Nhân viên này đang trong thời gian nghỉ phép (<?= date('d/m/Y', strtotime($user['leave_start'])) ?> - <?= date('d/m/Y', strtotime($user['leave_end'])) ?>).
+            <br>Trạng thái sẽ bị khóa ở "Tạm ngừng" cho đến khi hết hạn nghỉ phép.
+          </p>
         </div>
       </div>
     </div>
+  <?php endif; ?>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-10">
-      <form action="?act=tours-update&id=<?= $tour['id'] ?>" method="POST">
-        <!-- 1. Thông tin cơ bản -->
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Thông tin cơ bản</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Tên tour</label>
-              <input type="text" name="name" value="<?= htmlspecialchars($tourData['name'] ?? '') ?>" placeholder="VD: Tour Hà Nội - Sapa 3N2Đ" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <?php if (!empty($errors['name'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['name'][0] ?></div>
+  <form action="?act=user-update" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="id" value="<?= $user['id'] ?>">
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left Column -->
+      <div class="space-y-6">
+        <!-- Avatar Card -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i data-lucide="image" class="w-5 h-5 text-orange-500"></i>
+            Ảnh đại diện
+          </h3>
+
+          <div class="text-center">
+            <div class="mx-auto w-32 h-32 rounded-lg bg-blue-100 flex items-center justify-center mb-4 overflow-hidden">
+              <?php if (!empty($user['avatar'])): ?>
+                <img src="/uploads/avatar/<?= $user['avatar'] ?>" class="w-full h-full object-cover" id="current-avatar">
+              <?php else: ?>
+                <span class="text-4xl font-bold text-blue-600" id="avatar-letter"><?= strtoupper(substr($user['fullname'], 0, 1)) ?></span>
               <?php endif; ?>
             </div>
-
-            <div class="col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Giới thiệu</label>
-              <textarea rows="3" name="introduction" placeholder="Mô tả ngắn về tour..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"><?= htmlspecialchars($tourData['introduction'] ?? '') ?></textarea>
-              <?php if (!empty($errors['introduction'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['introduction'][0] ?></div>
-              <?php endif; ?>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Danh mục</label>
-              <select name="category_id" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">Chọn danh mục</option>
-                <?php renderOption($tree, "", $tourData["category_id"] ?? null); ?>
-              </select>
-              <?php if (!empty($errors['category_id'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['category_id'][0] ?></div>
-              <?php endif; ?>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Số ngày</label>
-              <input type="number" name="duration_days" value="<?= htmlspecialchars($tourData['duration_days'] ?? '') ?>" placeholder="4" min="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <?php if (!empty($errors['duration_days'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['duration_days'][0] ?></div>
-              <?php endif; ?>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Giá người lớn (VND)</label>
-              <input type="text" name="adult_price" value="<?= htmlspecialchars($tourData['adult_price'] ?? '') ?>" placeholder="4500000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <?php if (!empty($errors['adult_price'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['adult_price'][0] ?></div>
-              <?php endif; ?>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Giá trẻ em (VND)</label>
-              <input type="text" name="child_price" value="<?= htmlspecialchars($tourData['child_price'] ?? '') ?>" placeholder="4000000" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <?php if (!empty($errors['child_price'])): ?>
-                <div class="text-red-500 text-sm mt-1"><?= $errors['child_price'][0] ?></div>
-              <?php endif; ?>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-              <select name="status" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="active" <?= ($tourData['status'] ?? 'active') == 'active' ? 'selected' : '' ?>>Hoạt động</option>
-                <option value="inactive" <?= ($tourData['status'] ?? '') == 'inactive' ? 'selected' : '' ?>>Tạm dừng</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Loại tour</label>
-              <div class="flex items-center gap-2 mt-3">
-                <input type="checkbox" id="is_fixed" name="is_fixed" value="1" <?= ($tourData['is_fixed'] ?? 0) ? 'checked' : '' ?> class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                <label for="is_fixed" class="text-gray-700">Tour cố định (Có dịch vụ đi kèm)</label>
-              </div>
-            </div>
-
+            <p class="text-sm text-gray-600 mb-4">Ảnh hiện tại</p>
+<input type="file" name="avatar" id="avatar-input" class="hidden" accept="image/*" onchange="previewAvatar(this)">
+            <label for="avatar-input" class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              Thay đổi ảnh
+            </label>
+            <p class="text-sm text-gray-500 mt-2">JPG, PNG (Tối đa 2MB)</p>
           </div>
         </div>
 
-        <!-- Services Section (Hidden by default, shown if is_fixed is checked) -->
-        <div id="services-section" class="hidden">
-          <h3 class="text-lg font-semibold text-gray-900 mb-6">Dịch vụ đi kèm</h3>
+        <!-- Role & Status Card -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i data-lucide="shield" class="w-5 h-5 text-orange-500"></i>
+            Phân quyền
+          </h3>
 
-          <input id="searchService" type="text" placeholder="Tìm dịch vụ..."
-            class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition">
+          <div class="space-y-3">
+            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-pink-300 has-[:checked]:border-pink-500 has-[:checked]:bg-pink-50">
+              <input type="radio" name="roles" value="admin" <?= $user['roles'] == 'admin' ? 'checked' : '' ?> class="w-4 h-4 text-pink-600">
+              <span class="ml-3 flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <span class="font-medium">Admin</span>
+              </span>
+            </label>
 
-          <div id="serviceList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
-            <?php
-            $selectedServices = $_POST['service_ids'] ?? $tourServiceIds ?? [];
-            foreach ($services as $service):
-            ?>
-              <div class="service-item p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition">
-                <label class="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" name="service_ids[]" value="<?= $service['id'] ?>"
-                    <?= in_array($service['id'], $selectedServices) ? 'checked' : '' ?>
-                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                  <span class="text-sm font-medium text-gray-700"><?= htmlspecialchars($service['name']) ?></span>
-                </label>
-              </div>
-            <?php endforeach; ?>
-          </div>
-          <p id="noServiceResult" class="hidden text-sm text-gray-500 italic mt-2 text-center">Không tìm thấy dịch vụ phù hợp.</p>
-
-          <?php if (!empty($errors['service_ids'])): ?>
-            <div class="text-red-500 text-sm mt-1"><?= $errors['service_ids'][0] ?></div>
-          <?php endif; ?>
-        </div>
-
-        <!-- 2. Lịch trình tour -->
-        <div id="itinerary-section">
-          <div class="flex items-center justify-between my-6">
-            <h3 class="text-lg font-semibold text-gray-900">Lịch trình tour</h3>
-            <button type="button" id="add-day" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-              <i data-lucide="plus" class="w-5 h-5"></i>
-              Thêm ngày
-            </button>
+            <label class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+              <input type="radio" name="roles" value="guide" <?= $user['roles'] == 'guide' ? 'checked' : '' ?> class="w-4 h-4 text-blue-600">
+              <span class="ml-3 flex items-center gap-2">
+                <i data-lucide="user" class="w-4 h-4"></i>
+                <span class="font-medium">Hướng dẫn viên</span>
+              </span>
+            </label>
           </div>
 
-          <?php
-          // Nếu có POST data (lỗi validation), dùng POST data
-          // Nếu không, dùng itineraries từ database
-          if (!empty($_POST['destination_id'])) {
-            for ($i = 0; $i < count($_POST['destination_id']); $i++):
-              $dayNum = $i + 1;
-          ?>
-              <div id="day-<?= $dayNum ?>" class="border border-gray-200 rounded-xl <?= $i > 0 ? 'mt-6' : '' ?> p-6 space-y-5">
-                <div class="flex items-center justify-between">
-                  <h4 class="font-medium text-gray-900">Ngày <?= $dayNum ?></h4>
-                  <?php if ($i > 0): ?>
-                    <button type="button" class="remove-day-btn p-2 text-red-600 hover:text-red-700 text-sm font-medium" data-day="<?= $dayNum ?>">
-                      <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                  <?php endif; ?>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Điểm đến</label>
-                    <select name="destination_id[]" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="">Chọn điểm đến</option>
-                      <?php foreach ($destinations as $destination): ?>
-                        <option value="<?= $destination['id'] ?>"
-                          <?= (isset($_POST['destination_id'][$i]) && $_POST['destination_id'][$i] == $destination['id']) ? 'selected' : '' ?>>
-                          <?= htmlspecialchars($destination['name']) ?>
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                    <?php if (!empty($errors['destination_id'][$i])): ?>
-                      <div class="text-red-500 text-sm mt-1"><?= $errors['destination_id'][$i][0] ?></div>
-                    <?php endif; ?>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đến</label>
-                    <input type="time" name="arrival_time[]" value="<?= htmlspecialchars($_POST['arrival_time'][$i] ?? '') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                    <?php if (!empty($errors['arrival_time'][$i])): ?>
-                      <div class="text-red-500 text-sm mt-1"><?= $errors['arrival_time'][$i][0] ?></div>
-                    <?php endif; ?>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đi</label>
-                    <input type="time" name="departure_time[]" value="<?= htmlspecialchars($_POST['departure_time'][$i] ?? '') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                    <?php if (!empty($errors['departure_time'][$i])): ?>
-                      <div class="text-red-500 text-sm mt-1"><?= $errors['departure_time'][$i][0] ?></div>
-                    <?php endif; ?>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Mô tả hoạt động</label>
-                  <textarea rows="3" name="description[]" placeholder="Mô tả các hoạt động trong ngày..." class="w-full px-4 py-3 border border-gray-300 rounded-lg"><?= htmlspecialchars($_POST['description'][$i] ?? '') ?></textarea>
-                  <?php if (!empty($errors['description'][$i])): ?>
-                    <div class="text-red-500 text-sm mt-1"><?= $errors['description'][$i][0] ?></div>
-                  <?php endif; ?>
-                </div>
-              </div>
-            <?php
-            endfor;
-          } else {
-            // Dùng data từ database
-            foreach ($itineraries as $i => $itinerary):
-              $dayNum = $i + 1;
-            ?>
-              <div id="day-<?= $dayNum ?>" class="border border-gray-200 rounded-xl <?= $i > 0 ? 'mt-6' : '' ?> p-6 space-y-5">
-                <div class="flex items-center justify-between">
-                  <h4 class="font-medium text-gray-900">Ngày <?= $dayNum ?></h4>
-                  <?php if ($i > 0): ?>
-                    <button type="button" class="remove-day-btn p-2 text-red-600 hover:text-red-700 text-sm font-medium" data-day="<?= $dayNum ?>">
-                      <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                  <?php endif; ?>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Điểm đến</label>
-                    <select name="destination_id[]" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="">Chọn điểm đến</option>
-                      <?php foreach ($destinations as $destination): ?>
-                        <option value="<?= $destination['id'] ?>"
-                          <?= ($itinerary['destination_id'] == $destination['id']) ? 'selected' : '' ?>>
-                          <?= htmlspecialchars($destination['name']) ?>
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đến</label>
-                    <input type="time" name="arrival_time[]" value="<?= htmlspecialchars($itinerary['arrival_time'] ?? '') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đi</label>
-                    <input type="time" name="departure_time[]" value="<?= htmlspecialchars($itinerary['departure_time'] ?? '') ?>" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Mô tả hoạt động</label>
-                  <textarea rows="3" name="description[]" placeholder="Mô tả các hoạt động trong ngày..." class="w-full px-4 py-3 border border-gray-300 rounded-lg"><?= htmlspecialchars($itinerary['description'] ?? '') ?></textarea>
-                </div>
-              </div>
-          <?php
-            endforeach;
-          }
-          ?>
-        </div>
-
-        <!-- 3. Chính sách -->
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900 my-6">Chính sách</h3>
-          <div class="space-y-4">
-            <?php
-            $selectedPolicyIds = !empty($_POST['policy_ids']) ? $_POST['policy_ids'] : $tourPolicyIds;
-            foreach ($policies as $policy):
-            ?>
-              <label class="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" name="policy_ids[]" value="<?= $policy['id'] ?>"
-                  <?= in_array($policy['id'], $selectedPolicyIds) ? 'checked' : '' ?>
-                  class="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                <div>
-                  <p class="font-medium text-gray-900"><?= htmlspecialchars($policy['title']) ?></p>
-                  <p class="text-sm text-gray-600"><?= htmlspecialchars($policy['content']) ?></p>
-                </div>
-              </label>
-            <?php endforeach; ?>
-            <?php if (!empty($errors['policy_ids'])): ?>
-              <div class="text-red-500 text-sm mt-1"><?= $errors['policy_ids'][0] ?></div>
+          <div class="mt-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
+            <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" <?= $isOnLeave ? 'disabled' : '' ?>>
+              <option value="1" <?= $user['status'] == 1 ? 'selected' : '' ?>>Hoạt động</option>
+              <option value="0" <?= $user['status'] == 0 ? 'selected' : '' ?>>Tạm ngừng</option>
+            </select>
+            <?php if ($isOnLeave): ?>
+              <input type="hidden" name="status" value="0">
             <?php endif; ?>
           </div>
         </div>
+      </div>
 
-        <div class="flex fixed bottom-5 right-16 gap-3">
-          <button type="button" onclick="history.back()" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
-            Hủy
-          </button>
-          <button type="submit" class="px-6 py-2.5 bg-black text-white rounded-lg hover:bg-gray-900 transition font-medium">
-            Cập nhật Tour
-          </button>
+      <!-- Right Column -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i data-lucide="info" class="w-5 h-5 text-orange-500"></i>
+Thông tin cá nhân
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Họ và tên <span class="text-red-500">*</span>
+              </label>
+              <input type="text" name="fullname" value="<?= htmlspecialchars($user['fullname']) ?>" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Email <span class="text-red-500">*</span>
+              </label>
+              <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Số điện thoại <span class="text-red-500">*</span>
+              </label>
+              <input type="text" name="phone" value="<?= htmlspecialchars($user['phone']) ?>" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Mật khẩu mới <small class="text-gray-500 font-normal">(để trống nếu không đổi)</small>
+              </label>
+              <input type="password" name="password"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                placeholder="••••••••">
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+            <a href="?act=user" class="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">
+              Hủy bỏ
+            </a>
+            <button type="submit" class="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              Cập nhật
+            </button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
-  </div>
+  </form>
 </main>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const addDayBtn = document.getElementById('add-day');
-    const itinerarySection = document.getElementById('itinerary-section');
+  function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const currentAvatar = document.getElementById('current-avatar');
+        const avatarLetter = document.getElementById('avatar-letter');
 
-    // Đếm số ngày hiện có
-    let dayCount = document.querySelectorAll('[id^="day-"]').length;
-
-    // Tạo option HTML cho destinations
-    const destinationOptions = `
-      <option value="">Chọn điểm đến</option>
-      <?php foreach ($destinations as $destination): ?>
-        <option value="<?= $destination['id'] ?>"><?= htmlspecialchars($destination['name']) ?></option>
-      <?php endforeach; ?>
-    `;
-
-    // Thêm ngày mới
-    addDayBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      dayCount++;
-
-      const newDayHTML = `
-      <div id="day-${dayCount}" class="border border-gray-200 rounded-xl mt-6 p-6 space-y-5">
-        <div class="flex items-center justify-between">
-          <h4 class="font-medium text-gray-900">Ngày ${dayCount}</h4>
-          <button type="button" class="remove-day-btn p-2 text-red-600 hover:text-red-700 text-sm font-medium" data-day="${dayCount}">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Điểm đến</label>
-            <select name="destination_id[]"  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              ${destinationOptions}
-            </select>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đến</label>
-            <input type="time" name="arrival_time[]"  class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đi</label>
-            <input type="time" name="departure_time[]"  class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Mô tả hoạt động</label>
-          <textarea rows="3" name="description[]"  placeholder="Mô tả các hoạt động trong ngày..." class="w-full px-4 py-3 border border-gray-300 rounded-lg"></textarea>
-        </div>
-      </div>`;
-
-      itinerarySection.insertAdjacentHTML('beforeend', newDayHTML);
-    });
-
-    // Xóa ngày với event delegation
-    itinerarySection.addEventListener('click', (e) => {
-      const removeBtn = e.target.closest('.remove-day-btn');
-      if (removeBtn) {
-        const dayNum = removeBtn.dataset.day;
-        const dayDiv = document.getElementById(`day-${dayNum}`);
-        if (dayDiv && dayCount > 1) {
-          dayDiv.remove();
-          dayCount--;
+        if (currentAvatar) {
+          currentAvatar.src = e.target.result;
+        } else if (avatarLetter) {
+avatarLetter.parentElement.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover" id="current-avatar">`;
         }
       }
-    });
-
-    // Toggle Services Section
-    const isFixedCheckbox = document.getElementById('is_fixed');
-    const servicesSection = document.getElementById('services-section');
-
-    function toggleServices() {
-      if (isFixedCheckbox.checked) {
-        servicesSection.classList.remove('hidden');
-      } else {
-        servicesSection.classList.add('hidden');
-      }
+      reader.readAsDataURL(input.files[0]);
     }
-
-    if (isFixedCheckbox) {
-      isFixedCheckbox.addEventListener('change', toggleServices);
-      // Run on load to set initial state
-      toggleServices();
-    }
-
-    // Search Services
-    const searchService = document.getElementById("searchService");
-    const serviceItems = document.querySelectorAll(".service-item");
-    const noServiceResult = document.getElementById("noServiceResult");
-
-    if (searchService) {
-      searchService.addEventListener("keyup", function() {
-        const keyword = this.value.toLowerCase();
-        let count = 0;
-        serviceItems.forEach(item => {
-          const text = item.innerText.toLowerCase();
-          if (text.includes(keyword)) {
-            item.style.display = "block";
-            count++;
-          } else {
-            item.style.display = "none";
-          }
-        });
-        noServiceResult.classList.toggle("hidden", count > 0);
-      });
-
-      // Prevent submit on enter
-      searchService.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') e.preventDefault();
-      });
-    }
-  });
+  }
 </script>
 
-<?php
-require_once './views/components/footer.php';
-?>
+<?php require_once './views/components/footer.php'; ?>
